@@ -1,0 +1,83 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+scale 1;
+
+vertices
+(
+    (0 0 0)     // 0
+    (1 0 0)     // 1
+    (1 1 0)     // 2
+    (0 1 0)     // 3
+
+    (0 0 1)     // 4
+    (1 0 1)     // 5
+    (1 1 1)     // 6
+    (0 1 1)     // 7
+
+    (2 0 0)     // 8  (Unique to block 2)
+    (2 1 0)     // 9  (Unique to block 2)
+    (2 0 1)     // 10 (Unique to block 2)
+    (2 1 1)     // 11 (Unique to block 2)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (10 10 10) simpleGrading (1 1 1) // Block 1
+    hex (1 8 9 2 5 10 11 6) (10 10 10) simpleGrading (1 1 1) // Block 2, shares face (1 2 6 5) with Block 1
+);
+
+boundary
+(
+    westWall
+    {
+        type wall;
+        faces ((0 3 7 4)); // From Block 1
+    }
+    eastWall
+    {
+        type wall;
+        faces ((8 9 11 10)); // From Block 2
+    }
+    otherWalls
+    {
+        type wall;
+        faces
+        (
+            (0 1 5 4)   // Block 1 bottom
+            (3 2 6 7)   // Block 1 top
+            (1 8 10 5)  // Block 2 bottom
+            (2 9 11 6)  // Block 2 top
+        );
+    }
+    frontAndBack
+    {
+        type empty;
+        faces
+        (
+            (0 1 2 3)       // Block 1 front
+            (4 5 6 7)       // Block 1 back
+            (1 8 9 2)       // Block 2 front
+            (5 10 11 6)     // Block 2 back
+        );
+    }
+);
+
+// Note: The face (1 2 6 5) of block 0 and (1 2 6 5) of block 1 (using their local vertex numbering before remapping to global for block 1)
+// will be automatically identified as an internal face by blockMesh because its vertices are identical.
+// BlockViz should ideally show this as an internal boundary or just the blocks joined.
+
+// ************************************************************************* //

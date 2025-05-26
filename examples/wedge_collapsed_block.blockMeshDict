@@ -1,0 +1,120 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+scale 1;
+
+// Parameters for wedge
+rMin 0.5;
+rMax 1.0;
+angle 30.0; // degrees
+zDepth 0.1;
+
+// Pre-calculate wedge vertices
+delta #calc "0.5 * $angle * degToRad"; // degToRad is not a standard #calc function,
+                                      // so this would need external calculation or a fixed value
+                                      // Let's use a fixed value for simplicity in this example.
+                                      // Assume angle of 30 deg -> sin(15) ~ 0.2588, cos(15) ~ 0.9659
+p0x #calc "$rMin * 0.9659"; // rMin*cos(delta)
+p0y #calc "-$rMin * 0.2588"; // -rMin*sin(delta)
+p1x #calc "$rMax * 0.9659"; // rMax*cos(delta)
+p1y #calc "-$rMax * 0.2588"; // -rMax*sin(delta)
+p2x #calc "$rMax * 0.9659"; // rMax*cos(delta)
+p2y #calc "$rMax * 0.2588";  // rMax*sin(delta)
+p3x #calc "$rMin * 0.9659"; // rMin*cos(delta)
+p3y #calc "$rMin * 0.2588";  // rMin*sin(delta)
+
+vertices
+(
+    (0 0 0)             // 0  (Origin for collapsed edge)
+    ($p1x $p1y 0)       // 1
+    ($p2x $p2y 0)       // 2
+    (0 0 0)             // 3  (Same as 0 for collapse)
+
+    (0 0 $zDepth)       // 4  (Origin for collapsed edge - top face)
+    ($p1x $p1y $zDepth) // 5
+    ($p2x $p2y $zDepth) // 6
+    (0 0 $zDepth)       // 7  (Same as 4 for collapse)
+
+    // Outer arc points for defining curved edges
+    // For edge 1-2 (bottom)
+    ($rMax 0 0)         // 8
+    // For edge 5-6 (top)
+    ($rMax 0 $zDepth)   // 9
+);
+
+edges
+(
+    arc 1 2 8 // Bottom outer arc
+    arc 5 6 9 // Top outer arc
+);
+
+blocks
+(
+    // Collapsed vertices: v0=v3 and v4=v7 to form a wedge.
+    // The order is (localX0 localX1 localX2 localX3  localX0_top localX1_top localX2_top localX3_top)
+    // Here, localX0 and localX3 are the same points.
+    hex (0 1 2 0 4 5 6 4) (10 5 1) simpleGrading (1 1 1) // (rCells angleCells zCells)
+    // Note: OpenFOAM User Guide Fig 4.7 has (0 1 2 3 4 5 5 4) for a different collapse.
+    // For an axis-centered wedge: (v_axis_bottom v_outer_negY_bottom v_outer_posY_bottom v_axis_bottom  v_axis_top v_outer_negY_top v_outer_posY_top v_axis_top)
+    // The example (0 1 2 0 4 5 6 4) makes sense if vertices 0 and 3 are the axis points, and 4 and 7 are their top counterparts.
+);
+
+boundary
+(
+    axis
+    {
+        type empty; // Or wedge type if symmetry is on this plane
+        faces
+        (
+            (0 4 7 3) // This becomes a line due to collapse: (0 4 4 0)
+        );
+    }
+    outerWall
+    {
+        type wall;
+        faces
+        (
+            (1 2 6 5)
+        );
+    }
+    wedgeFront
+    {
+        type wedge; // This and wedgeBack form the cyclic pair for the wedge angle
+        faces
+        (
+            (0 1 5 4)
+        );
+    }
+    wedgeBack
+    {
+        type wedge;
+        faces
+        (
+            (3 7 6 2) // (0 4 6 2) due to collapse
+        );
+    }
+    frontAndBackPlanes // The z-normal faces
+    {
+        type empty; // Or symmetryPlane or cyclicAMI, depending on problem
+        faces
+        (
+            (0 3 2 1) // (0 0 2 1) due to collapse
+            (4 5 6 7) // (4 5 6 4) due to collapse
+        );
+    }
+);
+
+// ************************************************************************* //

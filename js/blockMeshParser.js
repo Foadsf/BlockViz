@@ -35,10 +35,17 @@ class BlockMeshParser {
         content = content.replace(/\/\*[\s\S]*?\*\//g, '');
         // Remove C++ style // comments (single-line)
         content = content.replace(/\/\/.*/g, '');
-        return content
+        const processedLines = content
             .split('\n')
             .map((line) => line.trim())
             .filter((line) => line.length > 0);
+
+        console.log('Raw lines around boundary (35-45):');
+        rawLines.slice(35, 45).forEach((line, i) => console.log(`Raw ${i + 35}: "${line}"`));
+        console.log('Processed lines around boundary (25-35):');
+        processedLines.slice(25, 35).forEach((line, i) => console.log(`Proc ${i + 25}: "${line}"`));
+
+        return processedLines;
     }
 
     _resolveValue(token) {
@@ -80,7 +87,7 @@ class BlockMeshParser {
 
                 // Substitute known macros in the expression
                 for (const macroKey in this.macros) {
-                    const regex = new RegExp(`\\$${macroKey}`, 'g');
+                    const regex = new RegExp(`\\${macroKey}`, 'g');
                     expression = expression.replace(regex, this.macros[macroKey]);
                 }
 
@@ -109,7 +116,13 @@ class BlockMeshParser {
             }
 
             match = macroRegex.exec(line);
-            if (match) {
+            // Only treat as macro if it's not a reserved OpenFOAM keyword
+            if (
+                match &&
+                !['type', 'faces', 'blocks', 'vertices', 'edges', 'boundary', 'scale'].includes(
+                    match[1]
+                )
+            ) {
                 const key = match[1];
                 const value = match[2].trim();
                 // If value is a number, store it as number, otherwise as string
@@ -130,7 +143,14 @@ class BlockMeshParser {
         console.log('Starting parsing...');
 
         let lines = this._removeCommentsAndStoreLines(fileContent);
+        console.log('Lines after comment removal:', lines.slice(20, 50)); // Show more lines around boundary section
+        lines.slice(20, 50).forEach((line, i) => console.log(`Line ${i + 20}: "${line}"`));
+
+        console.log('Before macro preprocessing, lines length:', lines.length);
         lines = this._preprocessMacrosAndEvals(lines); // Process macros and #eval first
+        console.log('After macro preprocessing, lines length:', lines.length);
+        console.log('Lines after macro preprocessing:');
+        lines.slice(20, 50).forEach((line, i) => console.log(`MacroLine ${i + 20}: "${line}"`));
 
         let i = 0;
         while (i < lines.length) {
@@ -478,100 +498,203 @@ class BlockMeshParser {
     }
 
     _parseBoundary(lines, index) {
+        console.log(
+            `Starting boundary parsing at index ${index}, line: "${lines[index]}", total lines: ${lines.length}`
+        );
+        console.log(
+            `Lines around boundary: ${index - 2}: "${lines[index - 2]}", ${index - 1}: "${
+                lines[index - 1]
+            }", ${index}: "${lines[index]}", ${index + 1}: "${lines[index + 1]}", ${index + 2}: "${
+                lines[index + 2]
+            }"`
+        );
         index++; // Move past "boundary"
         if (!lines[index] || lines[index].trim() !== '(') {
             this._logError("Expected '(' after boundary keyword.");
             return index;
         }
-        index++;
+        console.log(
+            `Found opening paren at index ${index}: "${lines[index]}", moving to index ${index + 1}`
+        );
+        index++; // Move into the list of patches
 
-        let currentPatch = null;
         while (index < lines.length && !lines[index].trim().startsWith(')')) {
-            // Outer closing paren for boundary
-            let line = lines[index].trim();
+            // Loop for each patch entry
+            let patchNameLine = lines[index].trim();
+            console.log(`Processing line ${index}: "${patchNameLine}"`);
 
-            // Check if this is a patch name (no current patch and looks like an identifier)
-            if (currentPatch === null && line.match(/^[a-zA-Z0-9_]+$/)) {
-                // Patch name
-                currentPatch = { name: line, type: null, faces: [] };
-            } else if (line === '{' && currentPatch) {
-                // Start of patch definition block
-            } else if (line.startsWith('type') && currentPatch) {
-                currentPatch.type = line.split(/\s+/)[1].replace(';', '');
-            } else if (line.startsWith('faces') && currentPatch) {
-                index++; // move to ( for faces
-                if (!lines[index] || lines[index].trim() !== '(') {
-                    this._logError(
-                        `Patch '${currentPatch.name}': Expected '(' after faces keyword.`
-                    );
-                    index = this._skipToPatchEnd(lines, index); // Try to recover
-                    currentPatch = null; // Reset current patch processing
-                    continue;
-                }
-                index++; // move to first face definition or closing )
-                let faceList = [];
-                while (index < lines.length && !lines[index].trim().startsWith(')')) {
-                    // faces list closing )
-                    const faceLine = lines[index].trim();
-                    const faceMatch = faceLine.match(/\(([^)]+)\)/);
-                    if (faceMatch) {
-                        const faceVertices = faceMatch[1].trim().split(/\s+/).map(Number);
-                        if (faceVertices.some(isNaN) || faceVertices.length < 3) {
-                            // Typically 4 for hex faces
-                            this._logError(
-                                `Patch '${currentPatch.name}': Invalid vertex numbers in face: ${faceLine}`
-                            );
-                        } else {
-                            faceList.push(faceVertices);
-                        }
-                    } else if (faceLine !== '') {
+            if (patchNameLine.startsWith(')') || patchNameLine === '') {
+                index++;
+                continue;
+            }
+
+            if (!patchNameLine.match(/^[a-zA-Z0-9_]+$/)) {
+                this._logError(`Expected patch name, but found: ${patchNameLine}`);
+                index = this._skipToNextPotentialPatchNameOrEnd(lines, index);
+                continue;
+            }
+
+            let currentPatch = { name: patchNameLine, type: null, faces: [] };
+            console.log(`Found patch: ${patchNameLine} at index ${index}`);
+            index++;
+
+            if (!lines[index] || lines[index].trim() !== '{') {
+                this._logError(
+                    `Patch '${currentPatch.name}': Expected '{' after patch name but found "${lines[index]}" at index ${index}.`
+                );
+                index = this._skipToNextPotentialPatchNameOrEnd(lines, index);
+                continue;
+            }
+            console.log(
+                `Found opening brace for patch ${currentPatch.name} at index ${index}: "${
+                    lines[index]
+                }", next line at ${index + 1} should be: "${lines[index + 1]}"`
+            );
+            index++; // Consumed '{', now inside patch definition
+
+            // Loop within the patch definition { ... }
+            while (index < lines.length && lines[index].trim() !== '}') {
+                let patchDetailLine = lines[index].trim();
+                console.log(`Processing patch detail line at index ${index}: "${patchDetailLine}"`);
+
+                if (patchDetailLine.startsWith('type')) {
+                    console.log(`Processing type line: "${patchDetailLine}"`);
+                    const parts = patchDetailLine.split(/\s+/);
+                    if (parts.length > 1) {
+                        currentPatch.type = parts[1].replace(';', '');
+                        console.log(`Set type to: ${currentPatch.type}`);
+                    } else {
                         this._logError(
-                            `Patch '${currentPatch.name}': Malformed face entry: ${faceLine}`
+                            `Patch '${currentPatch.name}': Malformed type definition: ${patchDetailLine}`
                         );
                     }
-                    index++;
-                }
-                if (currentPatch) currentPatch.faces = faceList;
-                if (index < lines.length && lines[index].trim().startsWith(')')) {
-                    // Closing ) for faces list
-                    index++; // Consume it
-                    if (index < lines.length && lines[index].trim() === ';') index++; // Consume optional semicolon
+                    index++; // Consumed type line
+                } else if (patchDetailLine.startsWith('faces')) {
+                    // Handle both "faces (" and "faces ((...))" formats
+                    if (patchDetailLine.includes('((')) {
+                        // Faces on same line: "faces ((0 3 7 4));"
+                        const faceMatch = patchDetailLine.match(/faces\s+\(\(([^)]+)\)\)/);
+                        if (faceMatch) {
+                            const faceVertices = faceMatch[1].trim().split(/\s+/).map(Number);
+                            if (faceVertices.some(isNaN) || faceVertices.length < 3) {
+                                this._logError(
+                                    `Patch '${currentPatch.name}': Invalid vertex numbers in face: ${patchDetailLine}`
+                                );
+                            } else {
+                                currentPatch.faces.push(faceVertices);
+                            }
+                        } else {
+                            this._logError(
+                                `Patch '${currentPatch.name}': Malformed single-line face entry: ${patchDetailLine}`
+                            );
+                        }
+                        index++; // Consumed the single-line faces definition
+                    } else {
+                        // Multi-line faces format: "faces" followed by "(" on next line
+                        index++; // Consumed 'faces' keyword line, expect '('
+                        if (!lines[index] || lines[index].trim() !== '(') {
+                            this._logError(
+                                `Patch '${currentPatch.name}': Expected '(' after 'faces' keyword.`
+                            );
+                            index = this._skipToClosingBraceOrNextPatch(lines, index); // Try to find '}'
+                            break; // Break from inner patch detail loop
+                        }
+                        index++; // Consumed '(', now inside faces list
+
+                        let faceList = [];
+                        while (index < lines.length && !lines[index].trim().startsWith(')')) {
+                            const faceLine = lines[index].trim();
+                            const faceMatch = faceLine.match(/\(([^)]+)\)/);
+                            if (faceMatch) {
+                                const faceVertices = faceMatch[1].trim().split(/\s+/).map(Number);
+                                if (faceVertices.some(isNaN) || faceVertices.length < 3) {
+                                    this._logError(
+                                        `Patch '${currentPatch.name}': Invalid vertex numbers in face: ${faceLine}`
+                                    );
+                                } else {
+                                    faceList.push(faceVertices);
+                                }
+                            } else if (faceLine !== '') {
+                                this._logError(
+                                    `Patch '${currentPatch.name}': Malformed face entry: ${faceLine}`
+                                );
+                            }
+                            index++; // Consumed a face line or an empty line within faces
+                        }
+                        currentPatch.faces = faceList;
+
+                        if (index < lines.length && lines[index].trim().startsWith(')')) {
+                            index++; // Consumed ')' for faces list
+                            if (index < lines.length && lines[index].trim() === ';') {
+                                index++; // Consumed optional semicolon for faces block
+                            }
+                        } else {
+                            this._logError(
+                                `Patch '${currentPatch.name}': Missing closing ')' for faces list.`
+                            );
+                            // Attempt to recover by finding the end of this patch block
+                            index = this._skipToClosingBraceOrNextPatch(lines, index);
+                            break; // Break from inner loop
+                        }
+                    }
+                } else if (patchDetailLine === '') {
+                    index++; // Skip empty lines
                 } else {
                     this._logError(
-                        `Patch '${currentPatch.name}': Missing closing ')' for faces list.`
+                        `Patch '${currentPatch.name}': Unexpected line in patch definition: ${patchDetailLine}`
                     );
+                    index++; // Consume the unexpected line
                 }
-            } else if (line === '}' && currentPatch) {
-                // End of patch definition block
-                if (!currentPatch.type)
-                    this._logError(`Patch '${currentPatch.name}' missing 'type' definition.`);
-                if (!currentPatch.faces || currentPatch.faces.length === 0)
-                    this._logError(
-                        `Patch '${currentPatch.name}' has no faces defined or faces parsing failed.`
-                    );
+            } // End of inner while for patch details (ends when '}' is found or end of lines)
 
-                this.boundary.push(currentPatch);
-                currentPatch = null;
-            } else if (
-                line !== '' &&
-                line !== '(' &&
-                line !== ')' &&
-                line !== '{' &&
-                line !== '}' &&
-                !line.startsWith('type') &&
-                !line.startsWith('faces')
-            ) {
-                // Skip silently - could be additional content we don't need to process
-                // Only log if it's truly unexpected (not a simple identifier)
-                if (!line.match(/^[a-zA-Z0-9_]+$/)) {
-                    this._logError(`Unexpected line in boundary definition: ${line}`);
-                }
+            if (!lines[index] || lines[index].trim() !== '}') {
+                this._logError(
+                    `Patch '${
+                        currentPatch.name
+                    }': Expected '}' to close patch definition but found '${
+                        lines[index] ? lines[index].trim() : 'EOF'
+                    }'`
+                );
+            } else {
+                index++; // Consumed the closing '}' for the patch
             }
+
+            // Finalize patch
+            if (!currentPatch.type)
+                this._logError(`Patch '${currentPatch.name}' missing 'type' definition.`);
+
+            this.boundary.push(currentPatch);
+        } // End of outer while for all patches
+
+        if (index < lines.length && lines[index].trim().startsWith(')')) {
+            index++; // Consume the final ')' for the boundary block
+            if (index < lines.length && lines[index].trim() === ';') index++; // Consume optional semicolon
+        } else {
+            this._logError("Missing or unexpected content at end of 'boundary' block.");
+        }
+        return index;
+    }
+
+    // Helper utility to skip lines until a potential recovery point
+    _skipToNextPotentialPatchNameOrEnd(lines, index) {
+        while (
+            index < lines.length &&
+            !lines[index].trim().startsWith(')') &&
+            !lines[index + 1]?.trim().match(/^[a-zA-Z0-9_]+$/)
+        ) {
             index++;
         }
-        if (index < lines.length && lines[index].trim().startsWith(')')) index++;
-        else this._logError("Missing closing ')' for boundary block.");
-        return index;
+        return index; // Return current index, outer loop will increment or check condition
+    }
+    _skipToClosingBraceOrNextPatch(lines, index) {
+        while (index < lines.length) {
+            const line = lines[index].trim();
+            if (line === '}') return index; // Found closing brace for current patch
+            if (line.match(/^[a-zA-Z0-9_]+$/) && lines[index + 1]?.trim() === '{') return index; // Found start of next patch
+            if (line.startsWith(')')) return index; // Found end of boundary list
+            index++;
+        }
+        return index; // EOF
     }
 
     _skipToPatchEnd(lines, index) {
