@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>BlockViz - OpenFOAM blockMeshDict Visualizer</title>
+        <link rel="stylesheet" href="css/style.css" />
+        <!-- Optionally add a favicon -->
+        <!-- <link rel="icon" type="image/svg+xml" href="path/to/your/favicon.svg"> -->
+    </head>
+    <body>
+        <div class="container">
+            <aside class="sidebar">
+                <h1>BlockViz</h1>
+                <div class="file-controls">
+                    <input
+                        type="file"
+                        id="fileInput"
+                        accept=".dict,.txt,text/*"
+                        title="Choose a blockMeshDict file"
+                    />
+                    <button id="loadExampleBtn" title="Load a built-in example">
+                        Load Example
+                    </button>
+                </div>
+
+                <div class="visualization-toggles">
+                    <h3>Display Options</h3>
+                    <label><input type="checkbox" id="showVertices" checked /> Show Vertices</label>
+                    <label
+                        ><input type="checkbox" id="showVertexLabels" checked /> Vertex
+                        Labels</label
+                    >
+                    <label><input type="checkbox" id="showEdges" checked /> Show Edges</label>
+                    <label><input type="checkbox" id="showFaces" checked /> Show Faces</label>
+                    <label><input type="checkbox" id="showFaceNormals" /> Show Face Normals</label>
+                    <label><input type="checkbox" id="showBlocks" checked /> Show Blocks</label>
+                    <label><input type="checkbox" id="generateMesh" /> Generate Mesh Preview</label>
+                    <label
+                        >Mesh Density:
+                        <input
+                            type="range"
+                            id="meshDensity"
+                            min="0.1"
+                            max="1.0"
+                            step="0.05"
+                            value="0.5"
+                            title="Adjust mesh preview density"
+                    /></label>
+                </div>
+
+                <div class="camera-controls">
+                    <h3>Camera</h3>
+                    <button id="resetViewBtn" title="Reset camera to default position">
+                        Reset View
+                    </button>
+                    <button id="fitToViewBtn" title="Fit geometry to view">Fit to View</button>
+                </div>
+
+                <div class="info-panel">
+                    <h3>Information</h3>
+                    <div id="stats">
+                        <p>Vertices: <span id="statVertices">0</span></p>
+                        <p>Edges: <span id="statEdges">0</span></p>
+                        <p>Faces: <span id="statFaces">0</span></p>
+                        <p>Blocks: <span id="statBlocks">0</span></p>
+                    </div>
+                </div>
+
+                <div class="error-log">
+                    <h3>Error Log</h3>
+                    <div id="errorMessages"></div>
+                </div>
+            </aside>
+
+            <main class="viewport-container">
+                <div id="viewport"></div>
+                <!-- Three.js canvas will be appended here -->
+            </main>
+        </div>
+
+        <!-- Third-party libraries -->
+        <script defer src="https://unpkg.com/three@0.164.1/build/three.min.js"></script>
+        <script defer src="js/lib/OrbitControls.js"></script>
+
+        <!-- Application scripts -->
+        <script defer src="js/blockMeshParser.js"></script>
+        <script defer src="js/validationEngine.js"></script>
+        <script defer src="js/geometryRenderer.js"></script>
+        <script defer src="js/main.js"></script>
+    </body>
+</html>

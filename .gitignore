@@ -1,0 +1,17 @@
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node modules (if you ever decide to use npm for development tools)
+node_modules/
+
+# Build artifacts (if any)
+dist/
+build/
+
+# Log files
+*.log
