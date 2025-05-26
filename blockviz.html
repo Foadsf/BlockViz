@@ -5,8 +5,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>BlockViz - OpenFOAM blockMeshDict Visualizer</title>
         <link rel="stylesheet" href="css/style.css" />
-        <!-- Optionally add a favicon -->
-        <!-- <link rel="icon" type="image/svg+xml" href="path/to/your/favicon.svg"> -->
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "./js/lib/three.module.min.js"
+                }
+            }
+        </script>
     </head>
     <body>
         <div class="container">
@@ -47,6 +52,17 @@
                             value="0.5"
                             title="Adjust mesh preview density"
                     /></label>
+                    <label
+                        >Label Font Size:
+                        <input
+                            type="range"
+                            id="labelFontSize"
+                            min="12"
+                            max="48"
+                            step="2"
+                            value="24"
+                            title="Adjust vertex label font size"
+                    /></label>
                 </div>
 
                 <div class="camera-controls">
@@ -69,24 +85,20 @@
 
                 <div class="error-log">
                     <h3>Error Log</h3>
-                    <div id="errorMessages"></div>
+                    <div id="errorMessages">
+                        <p style="color: #4fc1ff">Loading BlockViz...</p>
+                        <!-- Initial loading message -->
+                    </div>
                 </div>
             </aside>
 
             <main class="viewport-container">
                 <div id="viewport"></div>
-                <!-- Three.js canvas will be appended here -->
             </main>
         </div>
 
-        <!-- Third-party libraries -->
-        <script defer src="https://unpkg.com/three@0.164.1/build/three.min.js"></script>
-        <script defer src="js/lib/OrbitControls.js"></script>
-
-        <!-- Application scripts -->
-        <script defer src="js/blockMeshParser.js"></script>
-        <script defer src="js/validationEngine.js"></script>
-        <script defer src="js/geometryRenderer.js"></script>
-        <script defer src="js/main.js"></script>
+        <!-- Load main.js as an ES module. It will handle importing other modules. -->
+        <script type="module" src="js/main.js"></script>
+        <!-- <script src="js/appLoader.js"></script> -->
     </body>
 </html>

@@ -6,19 +6,27 @@ class ValidationEngine {
     validate(parsedData) {
         const errors = [];
         if (!parsedData || !parsedData.vertices || !parsedData.blocks) {
-            errors.push("Core data (vertices, blocks) missing.");
+            errors.push('Core data (vertices, blocks) missing.');
             return errors;
         }
 
         // Vertex Reference Checking (within blocks)
         parsedData.blocks.forEach((block, blockIndex) => {
             if (!block.vertices || block.vertices.length !== 8) {
-                errors.push(`Block ${blockIndex}: Must have exactly 8 vertices defined. Found ${block.vertices ? block.vertices.length : 0}.`);
+                errors.push(
+                    `Block ${blockIndex}: Must have exactly 8 vertices defined. Found ${
+                        block.vertices ? block.vertices.length : 0
+                    }.`
+                );
                 return; // Skip further validation for this malformed block
             }
-            block.vertices.forEach(vIndex => {
+            block.vertices.forEach((vIndex) => {
                 if (vIndex < 0 || vIndex >= parsedData.vertices.length) {
-                    errors.push(`Block ${blockIndex}: Vertex index ${vIndex} out of range (0-${parsedData.vertices.length - 1}).`);
+                    errors.push(
+                        `Block ${blockIndex}: Vertex index ${vIndex} out of range (0-${
+                            parsedData.vertices.length - 1
+                        }).`
+                    );
                 }
             });
 
@@ -32,21 +40,24 @@ class ValidationEngine {
             //     errors.push(`Warning: Block ${blockIndex} may not follow right-handed convention.`);
             // }
         });
-        
+
         // Boundary Face Validation
-        parsedData.boundary.forEach(patch => {
+        parsedData.boundary.forEach((patch) => {
             patch.faces.forEach((faceVertices, faceIndex) => {
                 if (faceVertices.length !== 4) {
-                     errors.push(`Patch '${patch.name}', Face ${faceIndex}: Must have exactly 4 vertices. Found ${faceVertices.length}.`);
+                    errors.push(
+                        `Patch '${patch.name}', Face ${faceIndex}: Must have exactly 4 vertices. Found ${faceVertices.length}.`
+                    );
                 }
-                faceVertices.forEach(vIndex => {
+                faceVertices.forEach((vIndex) => {
                     if (vIndex < 0 || vIndex >= parsedData.vertices.length) {
-                        errors.push(`Patch '${patch.name}', Face ${faceIndex}: Vertex index ${vIndex} out of range.`);
+                        errors.push(
+                            `Patch '${patch.name}', Face ${faceIndex}: Vertex index ${vIndex} out of range.`
+                        );
                     }
                 });
             });
         });
-
 
         // ... more validation rules ...
         // - Block Topology (e.g., no degenerate blocks if not intended)
@@ -70,3 +81,6 @@ class ValidationEngine {
         return true; // Placeholder
     }
 }
+
+// Make ValidationEngine available globally
+window.ValidationEngine = ValidationEngine;
