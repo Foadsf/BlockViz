@@ -1,0 +1,62 @@
+{
+    // Editor settings
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.renderWhitespace": "boundary",
+    "editor.rulers": [80, 120],
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.eol": "\n", // Enforce LF line endings
+
+    // Formatting on save
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode", // Requires Prettier extension
+
+    // Language-specific settings
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode", // Or "vscode.html-language-features"
+        "editor.suggest.insertMode": "replace",
+        "editor.wordWrap": "on"
+    },
+    "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode" // Or "vscode.css-language-features"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.maxTokenizationLineLength": 2500 // For potentially long lines in minified JS if you view them
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode" // Or "vscode.json-language-features"
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "yzhang.markdown-all-in-one", // Requires Markdown All in One extension
+        "editor.wordWrap": "on",
+        "files.trimTrailingWhitespace": false // Often desired for Markdown
+    },
+
+    // Prettier specific (if you install a .prettierrc.js or similar)
+    // "prettier.configPath": ".prettierrc.json", // Example if you add a prettier config
+
+    // Live Server extension settings (if used for development)
+    "liveServer.settings.port": 8000, // Matches your README
+    "liveServer.settings.root": "/",
+    "liveServer.settings.NoBrowser": false,
+    "liveServer.settings.donotShowInfoMsg": true,
+
+    // Search exclusions
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "js/lib/": true // Exclude minified library from general search
+    },
+    // Files to exclude from the file explorer
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true
+    }
+}

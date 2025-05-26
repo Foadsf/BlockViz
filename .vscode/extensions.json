@@ -1,0 +1,28 @@
+{
+  "recommendations": [
+    // Essential
+    "esbenp.prettier-vscode", // Code formatter (integrates with editor.formatOnSave)
+    "dbaeumer.vscode-eslint", // JavaScript/TypeScript linter (if you set up ESLint)
+
+    // HTML & CSS
+    "ecmel.vscode-html-css", // HTML CSS Support (better than default for some things)
+    "formulahendry.auto-rename-tag", // Automatically rename paired HTML/XML tag
+    "formulahendry.auto-close-tag", // Automatically add HTML/XML close tag
+
+    // JavaScript
+    "xabikos.javascriptsnippets", // ES6 code snippets
+
+    // Markdown
+    "yzhang.markdown-all-in-one", // All you need for Markdown (keyboard shortcuts, table of contents, auto preview)
+
+    // General Development
+    "ritwickdey.liveserver", // Launch a local development server with live reload feature
+    "ms-vscode.js-debug", // Built-in JavaScript debugger
+    "github.copilot", // (Optional) AI pair programmer, if you have a subscription
+    "eamodio.gitlens", // Supercharge Git capabilities
+    "gruntfuggly.todo-tree" // Show TODO, FIXME, etc. comments in a tree view
+  ],
+  "unwantedRecommendations": [
+    // Example: if you don't want a specific built-in recommendation
+  ]
+}
